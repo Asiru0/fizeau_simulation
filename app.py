@@ -610,9 +610,9 @@ def _input_form() -> PoseInput | None:
         "seed": "7",
         "spectrum": "450 0.2\n500 0.2\n550 0.2\n600 0.2\n650 0.2",
     }
-    st.subheader("单姿态参数")
+    st.subheader("子孔径构型")
     header_left, header_right = st.columns([5, 1])
-    header_left.caption("所有长度使用毫米；点击运行后才会执行仿真。")
+    header_left.caption("单位为 mm")
     header_right.button("增加子孔径", on_click=_add_aperture, width="stretch")
     values: dict[str, str] = {}
     aperture_ids: list[int] = []
@@ -636,7 +636,7 @@ def _input_form() -> PoseInput | None:
             width="stretch",
         )
 
-    st.subheader("光学与噪声")
+    st.subheader("其他设置")
     left, right = st.columns(2)
     with left:
         values["diameter"] = st.text_input("统一子孔径口径 (mm)", defaults["diameter"])
@@ -720,7 +720,7 @@ def _rename_multi_config(array_name: str) -> None:
 def _generate_pose_lines() -> None:
     try:
         array_name = st.session_state.generator_array
-        start = _parse_float(st.session_state.generator_start, "起始角度")
+        start = _parse_float(st.session_state.generator_start, "初始角度")
         step = _parse_float(st.session_state.generator_step, "角度步长")
         count = int(st.session_state.generator_count.strip())
         if count <= 0:
