@@ -179,8 +179,15 @@ T_u=\min(1,T+\Delta/2),
 $$
 
 $$
-t(f)=\operatorname{clip}\left(\frac{M(f)-T_l}{T_u-T_l},0,1\right),
-\qquad
+t(f)=
+\begin{cases}
+0, & M(f)\leq T_l,\\
+\dfrac{M(f)-T_l}{T_u-T_l}, & T_l<M(f)<T_u,\\
+1, & M(f)\geq T_u,
+\end{cases}
+$$
+
+$$
 w(f)=t^2(f)\left[3-2t(f)\right].
 $$
 
@@ -190,7 +197,7 @@ $$
 R(f)=K_0\left[1+s\left(1-M(f)\right)^q\right],
 $$
 
-其中当前实现使用 $s=4$、$q=2$，$K_0$ 对应界面中的正则化系数。最终频域估计为：
+其中当前实现使用 $s=4$ 、 $q=2$ ，$K_0$ 对应界面中的正则化系数。最终频域估计为：
 
 $$
 \hat X(f)=w(f)\frac{A(f)}{B(f)+R(f)}.
