@@ -17,7 +17,12 @@
 - 支持标准多姿态 Wiener 和软自适应 Wiener。
 - 输出 PSNR、前景平衡 PSNR、SSIM 和梯度相似度。
 
-## 安装依赖
+## 在线试用（推荐）
+
+访问 https://fizeau-simulation.streamlit.app/ 来试用！
+
+
+## 本地运行
 
 推荐 Python 3.10 及以上版本，使用以下命令安装依赖：
 
@@ -26,8 +31,6 @@ python -m pip install -r requirements.txt
 ```
 
 主要依赖为 NumPy、Matplotlib、Streamlit、pytest。
-
-## 启动交互应用
 
 使用以下命令启动交互应用：
 
