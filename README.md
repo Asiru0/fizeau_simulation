@@ -179,12 +179,7 @@ T_u=\min(1,T+\Delta/2),
 $$
 
 $$
-t(f)=
-\begin{cases}
-0, & M(f)\leq T_l,\\
-\dfrac{M(f)-T_l}{T_u-T_l}, & T_l<M(f)<T_u,\\
-1, & M(f)\geq T_u, 
-\end{cases} 
+t(f)=\max\left(0,\min\left(1,\frac{M(f)-T_l}{T_u-T_l}\right)\right).
 $$
 
 $$
