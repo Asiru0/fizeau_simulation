@@ -17,22 +17,21 @@
 - 支持标准多姿态 Wiener 和软自适应 Wiener。
 - 输出 PSNR、前景平衡 PSNR、SSIM 和梯度相似度。
 
-## 环境安装
+## 安装依赖
 
-建议使用 Python 3.10 或更高版本，并在项目根目录创建虚拟环境：
+推荐 Python 3.10 及以上版本，使用以下命令安装依赖：
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-主要依赖包括 NumPy、Matplotlib、Streamlit 和 pytest。
+主要依赖为 NumPy、Matplotlib、Streamlit、pytest。
 
 ## 启动交互应用
 
+使用以下命令启动交互应用：
+
 ```bash
-source .venv/bin/activate
 streamlit run app.py
 ```
 
@@ -42,11 +41,11 @@ streamlit run app.py
 http://localhost:8501
 ```
 
-应用顶部可以在“单姿态”和“多姿态合成”之间切换。所有计算参数使用文本输入；只有点击运行按钮后才会执行仿真。图像尺寸目前固定为 `256 x 256`。
+应用支持“单姿态”和“多姿态合成”两种模式。所有计算参数使用文本输入；点击运行按钮执行仿真。图像尺寸为 `256 x 256`。
 
 ## 宽谱输入
 
-光谱输入框每行包含波长和相对强度：
+光谱输入每行包含波长（单位为 nm）和相对强度（可以不归一化）：
 
 ```text
 450 0.2
@@ -56,13 +55,7 @@ http://localhost:8501
 650 0.2
 ```
 
-波长单位为 nm。程序会校验所有波长和强度，并将相对强度再次归一化：
-
-```text
-normalized_weight_i = intensity_i / sum(intensity)
-```
-
-随后分别计算每个波长的单色 OTF，并按归一化权重合成为宽谱 OTF。只有一行光谱数据时，计算自然退化为单色仿真。空行会被忽略，负强度和全零光谱会被拒绝。
+相对强度会做归一化，随后分别计算每个波长的单色 OTF，并按归一化权重合成为宽谱 OTF。只有一行光谱数据时，计算退化为单色仿真。
 
 ## 单姿态仿真
 
@@ -74,7 +67,7 @@ normalized_weight_i = intensity_i / sum(intensity)
 - 宽谱波长及相对强度。
 - 高斯噪声相对强度。
 - Wiener 正则化系数。
-- 可选随机种子；留空时每次运行生成新的噪声。
+- 可选随机数种子。
 
 子孔径默认为 4 个，可以动态增加或删除。运行后显示：
 
@@ -87,7 +80,7 @@ normalized_weight_i = intensity_i / sum(intensity)
 
 ### 阵列构型
 
-多姿态模式默认提供 B1、B2、B3 三个矩形构型：
+多姿态模式默认提供 B1、B2、B3 三个 60° 对角线的矩形构型：
 
 | 构型 | 矩形对角线 | 默认旋转角 |
 | --- | ---: | --- |
@@ -107,7 +100,7 @@ normalized_weight_i = intensity_i / sum(intensity)
 - 姿态数量。
 - 名称前缀。
 
-点击“追加到姿态计划”后，生成的姿态会附加到当前计划末尾，不会立即运行仿真。
+点击“追加到姿态计划”后，生成的姿态会附加到当前计划末尾。
 
 ### 姿态计划格式
 
@@ -155,14 +148,57 @@ pose_seed = base_seed + pose_index
 
 标准多姿态 Wiener 使用加权频域最小二乘形式：
 
-```text
-X_hat = sum(w_i * conj(H_i) * Y_i)
-        / (sum(w_i * |H_i|^2) + K)
-```
+$$
+\hat{X} = \frac{\sum_i w_i \cdot H_i^{*} \cdot Y_i}{\sum_i w_i \cdot |H_i|^2 + K}
+$$
 
-软自适应 Wiener 在复合 MTF 上增加软频率权重和随频率变化的正则化，适合降低低覆盖频率区域的噪声放大。相关输入包括：
+软自适应 Wiener 在复合 MTF 上增加软频率权重和随频率变化的正则化，适合降低低覆盖频率区域的噪声放大。设第 $i$ 个姿态的观测频谱为 $Y_i(f)$、OTF 为 $H_i(f)$，归一化姿态权重为 $p_i$。使用噪声方差倒数时：
 
-- 融合正则化系数。
+$$
+p_i=\frac{1/\sigma_i^2}{\frac{1}{N}\sum_{j=1}^{N}1/\sigma_j^2}.
+$$
+
+首先计算加权分子、分母和归一化复合 MTF：
+
+$$
+A(f)=\sum_{i=1}^{N}p_i H_i^*(f)Y_i(f),
+\qquad
+B(f)=\sum_{i=1}^{N}p_i\lvert H_i(f)\rvert^2,
+$$
+
+$$
+M(f)=\frac{\sqrt{B(f)}}{\max_f\sqrt{B(f)}}.
+$$
+
+令 MTF 阈值为 $T$、软过渡宽度为 $\Delta$，定义：
+
+$$
+T_l=\max(0,T-\Delta/2),
+\qquad
+T_u=\min(1,T+\Delta/2),
+$$
+
+$$
+t(f)=\operatorname{clip}\left(\frac{M(f)-T_l}{T_u-T_l},0,1\right),
+\qquad
+w(f)=t^2(f)\left[3-2t(f)\right].
+$$
+
+频率自适应正则化为：
+
+$$
+R(f)=K_0\left[1+s\left(1-M(f)\right)^q\right],
+$$
+
+其中当前实现使用 $s=4$、$q=2$，$K_0$ 对应界面中的正则化系数。最终频域估计为：
+
+$$
+\hat X(f)=w(f)\frac{A(f)}{B(f)+R(f)}.
+$$
+
+当选择等权或手动权重时，$p_i$ 分别由等权值或姿态计划中的相对权重归一化得到。相关输入包括：
+
+- 正则化系数。
 - MTF 阈值。
 - 软过渡宽度。
 
@@ -186,7 +222,6 @@ X_hat = sum(w_i * conj(H_i) * Y_i)
 ## 测试
 
 ```bash
-source .venv/bin/activate
 pytest -q
 ```
 
@@ -197,10 +232,10 @@ pytest -q
 - 非相干成像。
 - 子孔径为相同口径的圆形孔径。
 - 阵列理想共相，不包含活塞、倾斜或波前误差。
-- 所有姿态观察同一个归一化目标。
+- 所有姿态观测同一个归一化目标。
 - 宽谱成像由离散单色 OTF 的强度加权和近似。
 - 探测器噪声使用独立零均值高斯噪声近似。
-- 当前交互应用不模拟曝光时间、饱和、暗电流、读出偏置和姿态间配准误差。
+- 尚未模拟曝光时间、暗电流、读出偏置和姿态间配准误差。
 - 图像评价使用已知无噪目标，仅适用于合成数据实验。
 
-后续可继续加入实测光谱响应、Poisson 光子噪声、探测器非理想效应、活塞相位误差、离轴视场变化、姿态配准误差以及真实数据下的参数选择方法。
+后续可继续加入 Poisson 光子噪声、探测器非理想效应、活塞相位误差、离轴视场变化、姿态配准误差以及真实数据下的参数选择方法。
