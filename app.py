@@ -841,15 +841,39 @@ def _multi_pose_input_panel() -> tuple[str | None, MultiPoseInput | None]:
         values["multi_base_seed"] = st.text_input(
             "基础随机种子（可选）", "1000", key="multi_base_seed"
         )
-        values["multi_regularization"] = st.text_input(
-            "正则化系数", "0.002", key="multi_regularization"
-        )
-        values["multi_mtf_threshold"] = st.text_input(
-            "MTF 阈值", "0.0", key="multi_mtf_threshold"
-        )
+
+    st.subheader("融合参数")
+    method_col, weight_col = st.columns(2)
+    values["fusion_method"] = method_col.selectbox(
+        "融合方法",
+        ["standard", "soft_adaptive"],
+        format_func=lambda value: {
+            "standard": "标准多姿态 Wiener",
+            "soft_adaptive": "软自适应 Wiener",
+        }[value],
+    )
+    values["weight_mode"] = weight_col.selectbox(
+        "权重方式",
+        ["equal", "inverse_noise", "manual"],
+        format_func=lambda value: {
+            "equal": "等权",
+            "inverse_noise": "噪声方差倒数",
+            "manual": "姿态计划手动权重",
+        }[value],
+    )
+    regularization_col, threshold_col = st.columns(2)
+    values["multi_regularization"] = regularization_col.text_input(
+        "正则化系数", "0.002", key="multi_regularization"
+    )
+    values["multi_mtf_threshold"] = threshold_col.text_input(
+        "MTF 阈值", "0.0", key="multi_mtf_threshold"
+    )
+    if values["fusion_method"] == "soft_adaptive":
         values["multi_transition_width"] = st.text_input(
             "软过渡宽度", "0.04", key="multi_transition_width"
         )
+    else:
+        values["multi_transition_width"] = "0.04"
 
     st.subheader("规则姿态生成")
     generator_cols = st.columns(5)
@@ -872,24 +896,6 @@ def _multi_pose_input_panel() -> tuple[str | None, MultiPoseInput | None]:
         key="pose_plan_text",
         height=300,
         help="noise_sigma 和 seed 使用 - 时继承公共参数；enabled 使用 1 或 0。",
-    )
-    method_col, weight_col = st.columns(2)
-    values["fusion_method"] = method_col.selectbox(
-        "融合方法",
-        ["standard", "soft_adaptive"],
-        format_func=lambda value: {
-            "standard": "标准多姿态 Wiener",
-            "soft_adaptive": "软自适应 Wiener",
-        }[value],
-    )
-    values["weight_mode"] = weight_col.selectbox(
-        "权重方式",
-        ["equal", "inverse_noise", "manual"],
-        format_func=lambda value: {
-            "equal": "等权",
-            "inverse_noise": "噪声方差倒数",
-            "manual": "姿态计划手动权重",
-        }[value],
     )
     validate_col, run_col = st.columns(2)
     validate = validate_col.button("校验姿态计划", width="stretch")
